@@ -1,0 +1,10 @@
+---
+  - name: install ifconfig
+    hosts: localhost
+    tasks:
+      - name: Instalacao ifconfig
+        apt:
+          name: net-tools
+          state: present
+          update_cache: yes
+                              

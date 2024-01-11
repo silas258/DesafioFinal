@@ -1,0 +1,27 @@
+---
+  - name: incluindo variáveis MySQL
+    include_vars:
+      file: /home/silas_santos/BootcampElven/ansible/roles/mysql-server/default/vars.yml
+
+  - name: instalacao mysql-server
+    apt:
+      pkg:
+      - mysql-server
+      - mysql-client
+      - python3-mysqldb
+      - libmysqlclient-dev
+
+      update_cache: yes
+  
+  - name: Criando usuário MySQL
+    community.mysql.mysql_user:
+      name: "silas258"
+      password: "{{ mysql_root_password }}"
+      priv: '*.*:ALL'
+      host: "%"
+      state: present
+
+  - name: Criando database wordpress
+    community.mysql.mysql_db:
+      name: "wordpress"
+      state: present

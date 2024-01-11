@@ -1,0 +1,9 @@
+  - name: stop servicos
+    hosts: localhost
+    vars:
+      - a_stop_services: nginx
+    tasks:
+      - name: parando o servico
+        ansible.builtin.service:
+          name: "{{ a_stop_services }}"
+          state: stopped

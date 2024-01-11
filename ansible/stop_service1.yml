@@ -1,0 +1,20 @@
+---
+  - name: stop servicos
+    hosts: localhost
+    vars:
+    - a_stop_services: nginx
+    tasks:
+    - name: Verificar o estado atual do serviço nginx (depuração)
+      ansible.builtin.command:
+        cmd: service {{ a_stop_services }} status
+      register: nginx_status
+      changed_when: false
+
+    - debug:
+        var: nginx_status.stdout
+
+    - name: Parando o servico
+      ansible.builtin.service:
+        name: nginx
+        state: stopped
+

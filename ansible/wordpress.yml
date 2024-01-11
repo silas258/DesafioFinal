@@ -1,0 +1,10 @@
+---
+  - name: instalação Wordpress
+    hosts: wordpress2
+    become: yes
+    roles:
+      - mysql-server
+      - wordpress
+    vars:
+      ansible_ssh_private_key_file: /home/silas_santos/BootcampElven/ansible/curso-terraform.pem
+      ansible_user: ubuntu
