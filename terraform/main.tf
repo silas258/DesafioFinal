@@ -77,37 +77,62 @@ resource "aws_internet_gateway" "igw_desafiofinal" {
   }
 }
 
-# Criação da Tabela de Roteamento
-resource "aws_route_table" "rtb_desafiofinal" {
+# Crição de IP Elastico
+resource "aws_eip" "ip_elastico_nat" {
+
+  depends_on = [ aws_internet_gateway.igw_desafiofinal ]
+}
+
+# Criação de Nat Gateway
+resource "aws_nat_gateway" "nat_gateway_desafio_final" {
+  allocation_id = aws_eip.ip_elastico_nat.id
+  subnet_id = aws_subnet.public_subnet_a.id
+  
+  depends_on = [ aws_internet_gateway.igw_desafiofinal ]
+}
+
+# Criação da Tabela de rotas publica
+resource "aws_route_table" "rtb_desafiofinal_publica" {
   vpc_id = aws_vpc.vpc_prd.id
 
   route {
-    cidr_block = "0.0.0.0/0"                              #destino
-    gateway_id = aws_internet_gateway.igw_desafiofinal.id #alvo
-  }
-
-  tags = {
-    Name = "rtb_desafiofinal"
+    cidr_block = "0.0.0.0/0"                              #destino  = quem tem acesso
+    gateway_id = aws_internet_gateway.igw_desafiofinal.id #alvo     = porta para o acesso
   }
 }
 
-# Criação da Rota Default para Acesso à Internet
-resource "aws_route" "rtb_default_desafiofinal" {
-  route_table_id         = aws_route_table.rtb_desafiofinal.id
-  destination_cidr_block = "0.0.0.0/0"
-  gateway_id             = aws_internet_gateway.igw_desafiofinal.id
+# Criação da Tabela de rotas privada
+resource "aws_route_table" "rtb_desafiofinal_privada" {
+  vpc_id = aws_vpc.vpc_prd.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.nat_gateway_desafio_final.id
+  }
 }
 
-# Associação da Subnet Pública A com a Tabela de Roteamento
+# Associação da Subnet Pública A com a Tabela de Roteamento publica
 resource "aws_route_table_association" "rtb_pub_association_a" {
   subnet_id      = aws_subnet.public_subnet_a.id
-  route_table_id = aws_route_table.rtb_desafiofinal.id
+  route_table_id = aws_route_table.rtb_desafiofinal_publica.id
 }
 
-# Associação da Subnet Pública B com a Tabela de Roteamento
+# Associação da Subnet Pública B com a Tabela de Roteamento publica
 resource "aws_route_table_association" "rtb_pub_association_b" {
   subnet_id      = aws_subnet.public_subnet_b.id
-  route_table_id = aws_route_table.rtb_desafiofinal.id
+  route_table_id = aws_route_table.rtb_desafiofinal_publica.id
+}
+
+# Associação da Subnet Privada A com a Tabela de Roteamento priv
+resource "aws_route_table_association" "rtb_priv_association_a" {
+  subnet_id = aws_subnet.private_subnet_a.id
+  route_table_id = aws_route_table.rtb_desafiofinal_privada.id
+}
+
+# Associação da Subnet Privada B com a Tabela de Roteamento priv
+resource "aws_route_table_association" "rtb_priv_association_b" {
+  subnet_id = aws_subnet.private_subnet_b.id
+  route_table_id = aws_route_table.rtb_desafiofinal_privada.id
 }
 
 #Criação grupo de segurança
@@ -159,6 +184,8 @@ resource "aws_instance" "maquina" {
   instance_type               = var.type_aws_instance
   vpc_security_group_ids      = [aws_security_group.allow_ssh.id]
   key_name                    = var.key_aws_instance
+  
+  /*
   user_data                   = <<-EOF
      #!/bin/bash
      sudo apt update && sudo apt install curl ansible unzip -y
@@ -166,9 +193,12 @@ resource "aws_instance" "maquina" {
      wget https://silas-teste1.s3.amazonaws.com/ansible.zip
      unzip ansible.zip
      cd /tmp/ansible # Navega até o diretório do playbook
-     export WORDPRESS_DB_HOST=$(terraform output rds_endpoint)
+     #export WORDPRESS_DB_HOST=$(terraform output rds_endpoint)
+     sudo chmod -R 755 /var/www/html/wordpress
      sudo ansible-playbook wordpress.yml
   EOF
+  */
+
   monitoring                  = true
   subnet_id                   = aws_subnet.public_subnet_a.id
   associate_public_ip_address = true
@@ -198,12 +228,20 @@ resource "aws_db_instance" "my_db_instance" {
 }
 
 # Saída para o endpoint DNS do RDS
-output "rds_endpoint" {
-  value = aws_db_instance.my_db_instance.endpoint
-}
+#output "rds_endpoint" {
+ # value = aws_db_instance.my_db_instance.endpoint
+#}
 
 #serve para utilizar multi-a-z
 resource "aws_db_subnet_group" "my_db_subnet_group" {
   name       = "mydbsubnetgroup"
-  subnet_ids = [aws_subnet.private_subnet_a.id, aws_subnet.private_subnet_b.id]
+  subnet_ids = [aws_subnet.private_subnet_a.id, aws_subnet.private_subnet_b.id]  #tirei para testar depois preciso acrestar aws_subnet.private_subnet_b.id
 }
+
+# Tirei esse bloco de código
+# Criação da Rota Default para Acesso à Internet
+#resource "aws_route" "rtb_default_desafiofinal" {
+#  route_table_id         = aws_route_table.rtb_desafiofinal.id
+#  destination_cidr_block = "0.0.0.0/0"
+#  gateway_id             = aws_internet_gateway.igw_desafiofinal.id
+#}
